@@ -77,31 +77,31 @@ df_org.head()
 # In[4]:
 
 
-df_org.info()
+df_org.tail()
 
 
 # In[5]:
 
 
-df_org.describe()
+df_org.sample()
 
 
 # In[6]:
 
 
-df_org.sample()
+df_org.dtypes
 
 
 # In[7]:
 
 
-df_org.isnull().sum()
+df_org.isnull().any()
 
 
 # In[8]:
 
 
-df_org[df_org.duplicated()]
+df_org.describe()
 
 
 # ---
@@ -115,13 +115,31 @@ df_org[df_org.duplicated()]
 # In[9]:
 
 
-df = df_org.copy().dropna()
+df_org.info()
 
 
 # In[10]:
 
 
-df.info()
+df_org.isnull().sum()
+
+
+# In[11]:
+
+
+df = df_org.drop(['homepage', 'tagline', 'keywords', 'production_companies', 'imdb_id', 'cast', 'overview'], axis = 1)
+
+
+# In[12]:
+
+
+df.isnull().sum()
+
+
+# In[13]:
+
+
+df.dropna(inplace = True)
 
 
 # ---
@@ -145,22 +163,22 @@ df.info()
 # 
 # 要求：每一个语句只能用一行代码实现。
 
-# In[11]:
+# In[14]:
 
 
 df[['id', 'popularity', 'budget', 'runtime', 'vote_average']]
 
 
-# In[12]:
+# In[15]:
 
 
-df.iloc[np.append(np.arange(0, 20), np.arange(48, 50))]
+df.iloc[np.append(np.arange(0, 20), np.arange(47, 49))]
 
 
-# In[13]:
+# In[16]:
 
 
-df['popularity'].iloc[50 : 61]
+df['popularity'].iloc[49 : 60]
 
 
 # ---
@@ -174,13 +192,13 @@ df['popularity'].iloc[50 : 61]
 # 
 # 要求：请使用 Logical Indexing实现。
 
-# In[14]:
+# In[17]:
 
 
 df.query('popularity > 5')
 
 
-# In[15]:
+# In[18]:
 
 
 df.query('popularity > 5 & release_year > 1996')
@@ -195,16 +213,16 @@ df.query('popularity > 5 & release_year > 1996')
 # 
 # 要求：使用 `Groupby` 命令实现。
 
-# In[16]:
+# In[19]:
 
 
-df.groupby('release_year').revenue.mean()
+df.groupby('release_year').revenue.agg('mean')
 
 
-# In[17]:
+# In[20]:
 
 
-df.groupby('director').popularity.mean().sort_values(ascending = False)
+df.groupby('director').popularity.agg('mean').sort_values(ascending = False)
 
 
 # ---
@@ -226,63 +244,58 @@ df.groupby('director').popularity.mean().sort_values(ascending = False)
 
 # **任务3.1：**对 `popularity` 最高的20名电影绘制其 `popularity` 值。
 
-# In[18]:
+# In[21]:
 
 
-pop_20 = df.groupby('director').popularity.mean().sort_values(ascending = False)[:20]
-x_ticks = np.arange(0, pop_20.max() + 2, 3)
+pop_20 = df.sort_values('popularity', ascending = False)[['original_title', 'popularity']][:20]
+x_ticks = np.arange(0, pop_20['popularity'].max() + 6, 3)
 
 plt.subplots(figsize = (10, 8))
-plt.barh(pop_20.index, pop_20.values);
+plt.barh(pop_20['original_title'], pop_20['popularity']);
 
 plt.xticks(x_ticks);
-plt.title('Top 20 Most Popular Directors');
-plt.xlabel('Average Popularity Score');
-plt.ylabel('Directors');
+plt.title('Top 20 Most Popular Movies');
+plt.xlabel('Popularity Score');
+plt.ylabel('Movies');
 
 
-# <b>简要分析</b>：我使用横向的条形图，展示 20 位最受欢迎的导演的平均知名度。最广为人知的导演是 Colin Trevorrow，知名度达到 33，排名 2 - 4 位的导演知名度都超过了 10，其余导演的知名度相差并不大
+# <b>简要分析</b>：我使用横向的条形图，展示 20 个最受欢迎的电影。前三名的评分比较高，后 9 名的评分都比较接近。
 
 # ---
 # **任务3.2：**分析电影净利润（票房-成本）随着年份变化的情况，并简单进行分析。
 
-# In[19]:
+# In[22]:
 
 
-x_bins = np.arange(df['release_year'].min() - 1, df['release_year'].max() + 10, 10)
-data_xbins = pd.cut(df['release_year'], x_bins, right = False, include_lowest = True)
-x_center = x_bins[: -1]
+df['profits'] = df['revenue_adj'] - df['budget_adj']
+y_mean = df.groupby('release_year')['profits'].mean()
+plt.errorbar(x = y_mean.index, y = y_mean);
 
-y_means = df[['budget', 'revenue']].groupby(data_xbins).mean()
-y_means['profit'] = np.round((y_means['revenue'] - y_means['budget']) / 1000000, 2)
-
-plt.bar(x = x_center, height = y_means['profit'], width = 8);
 plt.title('Movie Profit');
 plt.xlabel('Decade');
-plt.yticks(np.arange(0, y_means['profit'].max() + 10, 10));
-plt.ylabel('Profit (in Million)');
+plt.ylabel('Profit');
 
 
-# <b>简要分析</b>：我使用纵向的条形图，展示 从 1960 年代到 2010 年代的利润变化，图中 y 轴的利润数字都是百万级。图中可见 1970 - 1990 年代是利润最高的 3 个 10 年，其中以 1990 年代最高，进入 2000 年后，电影利润开始下降，几乎与 1960 年代差不多
+# <b>简要分析</b>：我使用折线图展示 从 1960 年代到 2010 年代的利润变化。图中可见在 1960 - 1970 年代初期涨跌幅度较大，利润的最高点出现在 1970 年代中后期，之后利润有大幅下降，并有涨幅，涨跌幅度也比较小，但总体呈现下降趋势。
 
 # ---
 # 
 # **[选做]任务3.3：**选择最多产的10位导演（电影数量最多的），绘制他们排行前3的三部电影的票房情况，并简要进行分析。
 
-# In[20]:
+# In[23]:
 
 
 top_10_director = df.groupby('director')['director'].count().sort_values(ascending = False)[: 10]
 top_10_director
 
 
-# In[21]:
+# In[24]:
 
 
 df_top3 = pd.DataFrame(columns = ['director', 'original_title', 'popularity', 'revenue'])
 
 
-# In[22]:
+# In[25]:
 
 
 for director in top_10_director.index:
@@ -292,7 +305,7 @@ for director in top_10_director.index:
     df_top3 = df_top3.append(tmp_df, ignore_index = True)
 
 
-# In[23]:
+# In[26]:
 
 
 x_rev = np.arange(0, 1100, 100)
@@ -313,7 +326,7 @@ ax.legend(loc = "upper right", ncol = 2);
 # 
 # **[选做]任务3.4：**分析1968年~2015年六月电影的数量的变化。
 
-# In[24]:
+# In[27]:
 
 
 df_year = df_org.copy()
@@ -321,24 +334,30 @@ df_year['release_date'] = pd.to_datetime(df_year['release_date'])
 df_year['release_month'] = df_year['release_date'].apply(lambda dt : dt.month)
 
 
-# In[25]:
+# In[28]:
 
 
 df_year = df_year[((df_year['release_year'] > 1967) & (df_year['release_year'] < 2015)) 
                   | ((df_year['release_year'] == 2015) & (df_year['release_month'] < 7))]
 
 
-# In[28]:
+# In[29]:
 
 
 df_year_sub = df_year.sort_values(['release_year', 'release_month'])[['original_title', 'release_year', 'release_month']]
 
 
-# In[31]:
+# In[30]:
 
 
 df_year_size = df_year_sub.groupby(['release_year', 'release_month']).size()
 df_year_size = df_year_size.reset_index(name = 'count')
+
+
+# In[31]:
+
+
+df_year_size.info()
 
 
 # In[32]:
@@ -350,29 +369,93 @@ df_year_size.head()
 # In[33]:
 
 
-df_year_size = df_year_size.pivot(index = 'release_year', columns = 'release_month', values = 'count')
+df_year_size.fillna(0, inplace = True)
 
 
 # In[34]:
 
 
-df_year_size.fillna(0, inplace = True)
+plt.subplots(figsize = (12, 12))
+sns.barplot(data = df_year_size, x = 'release_month', y = 'count', hue = 'release_year');
+y_ticks = np.arange(0, df_year_size['count'].max() + 10, 10)
 
-
-# In[35]:
-
-
-sns.heatmap(df_year_size, cmap="BuPu");
+plt.xlabel('Release Month')
+plt.yticks(y_ticks);
+plt.ylabel('Number of Movies')
+plt.legend(loc = "upper left", bbox_to_anchor = (1, 1), ncol = 5);
 
 
 # ---
 # 
 # **[选做]任务3.5：**分析1968年~2015年六月电影 `Comedy` 和 `Drama` 两类电影的数量的变化。
 
-# In[ ]:
+# In[35]:
 
 
+df_genres = df_year.sort_values(['release_year', 'release_month'])[['original_title', 'release_year', 'release_month', 'genres']].dropna()
 
+
+# In[36]:
+
+
+df_genres.head()
+
+
+# In[37]:
+
+
+df_genres = df_genres[df_genres['genres'].str.contains('Comedy') | df_genres['genres'].str.contains('Drama')]
+
+
+# In[38]:
+
+
+def clean_genre(g):
+    
+    genre = ''
+    
+    if 'Drama' in g:
+        genre = 'Drama'
+    if 'Comedy' in g:
+        genre = 'Comedy'
+    if 'Drama' in g and 'Comedy' in g:
+        genre = 'Drama and Comedy'
+    
+    return genre
+
+
+# In[39]:
+
+
+df_genres['genres_x'] = df_genres['genres'].apply(lambda g : clean_genre(g))
+
+
+# In[40]:
+
+
+df_genres.head()
+
+
+# In[41]:
+
+
+df_genres_size = df_genres.groupby(['release_year', 'release_month', 'genres_x']).size()
+
+
+# In[42]:
+
+
+df_genres_size = df_genres_size.reset_index(name = 'count')
+
+
+# In[43]:
+
+
+g = sns.FacetGrid(data = df_genres_size, col = 'genres_x')
+
+g.map(sns.barplot, 'release_month', 'count', 'release_year')
+
+plt.legend(loc = "upper left", bbox_to_anchor = (1, 1), ncol = 5);
 
 
 # > 注意: 当你写完了所有的代码，并且回答了所有的问题。你就可以把你的 iPython Notebook 导出成 HTML 文件。你可以在菜单栏，这样导出**File -> Download as -> HTML (.html)、Python (.py)** 把导出的 HTML、python文件 和这个 iPython notebook 一起提交给审阅者。
